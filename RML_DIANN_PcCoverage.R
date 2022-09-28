@@ -2,13 +2,13 @@ MonFichierReport<-choose.files(default = "", caption = "Selectionner le fichier 
 
 library("stringr")
 
-#############Calcul taille Protéine from Fasta
-#trouve fasta
+#############Proteins size from Fasta
+#find fasta
 Mylog<-read.delim(gsub("report.tsv", "report.log.txt", MonFichierReport),sep="\t")
 MyFasta<-Mylog[str_detect(Mylog[,1],".fasta")==TRUE ,][1]
 MyFasta<-str_sub(MyFasta,53,nchar(MyFasta))
 
-#import fasta et retire les lignes NA
+#import fasta filter lignes with NA
 Fasta<-read.delim(MyFasta,header = FALSE)
 Fasta<-Fasta[!is.na(Fasta),]
 Fasta<-as.data.frame(Fasta)
@@ -20,7 +20,7 @@ Accession<-strsplit(x, split = "\\|") [[1]][2]
 return(Accession)
 }
 
-#calcul length et sequence
+#lengths and sequences
 MyListeAccession<-c()
 MyLenght<-c()
 MySequence<-c()
@@ -44,7 +44,7 @@ FastaProtLenght <- data.frame (Accession  = MyListeAccession,ProtLenght = MyLeng
 rm(Fasta,Mylog,MyFasta)
 
 
-##########Calcul nombre d'Acide aminé détecté par prot
+##########Number of aminoacids per protein
 x<-read.table(MonFichierReport,
               # colClasses = c("character",rep("NULL",2),"character",rep("NULL",10),"character",rep("NULL",40)),      
               header = TRUE,
@@ -52,7 +52,7 @@ x<-read.table(MonFichierReport,
 x<-x[,c("File.Name","Protein.Ids","Stripped.Sequence")]
 
 
-#Extrait première prot du Protein.Ids
+#Extract first prot from Protein.Ids
 ExtractFirstAccession <- function(x){
   FirstAccession<-strsplit(x, split = ";") [[1]][1]
   return(FirstAccession)
@@ -60,16 +60,16 @@ ExtractFirstAccession <- function(x){
 
 x$FirstAccession<-as.character(lapply(x$Protein.Ids,ExtractFirstAccession))
 
-#supprime doublon
+#delete double
 if (!require("dplyr")) {install.packages("dplyr", dependencies = TRUE)}
 library(dplyr)
 x <- distinct(x)
 
-#Merge report et FastaProtLenght
+#Merge report and FastaProtLenght
 x<-merge(x,FastaProtLenght,all.X=TRUE,all.y = FALSE, by.x="FirstAccession",by.y="Accession")
 
 
-#liste des positions des AA de chaque peptide
+#list of positions of Amino Acids of each peptids
 PositionPep<-function(i){
   P<-str_locate(pattern = x$Stripped.Sequence[i], x$ProtSequence[i])
   listePosition<-paste(P[1,1]:P[1,2],collapse =";")
@@ -79,19 +79,17 @@ PositionPep<-function(i){
 x$PosPep<-as.character(lapply(1:nrow(x),PositionPep))
 
 
-#regroupe les PosPep par firstProtienGroup+FileName
 Mypaste<-function(x){
   paste(x,collapse =";")
 }
 x<-aggregate(data=x,PosPep~FirstAccession+File.Name,"Mypaste")
 
-#élimine doublon dans PosPep
 for(i in 1:nrow(x)){
   x$Cov[i]<-length(unique(strsplit(x$PosPep[i], split = ";")[[1]]))
 }
 
 
-#Calcul%Cov
+#Calcul %Cov
 x<-merge(x,FastaProtLenght,all.X=TRUE,all.y = FALSE, by.x="FirstAccession",by.y="Accession")
 x$PcCov<-100*x$Cov/x$ProtLenght
 x<-x[,c(1,2,7)]
@@ -110,4 +108,3 @@ for(i in 6:ncol(Myoutput)){
   hist(Myoutput[,i],main=paste0("colonne ",i,", moyenne=",mean(Myoutput[,i],na.rm = TRUE)))
 }
 
-cat("Le fichier PcCoverage.tsv est arrivé à destination.\nMerci d'avoir choisi Proteom'IC R-line ,\net à bientot.")
