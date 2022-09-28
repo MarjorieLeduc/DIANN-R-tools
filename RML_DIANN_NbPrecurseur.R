@@ -1,5 +1,3 @@
-#En fait ça cOmpte séparément le même peptide chargé 2 et 3 fois, ou avec et sans modif)
-
 MonDossier<-choose.dir(default = "", caption = "Select_folder")  
 setwd(MonDossier)
 
@@ -13,7 +11,7 @@ if (!require("reshape2", character.only = TRUE)) {
 }
 library(reshape2)
 
-#calcule nb pep par protein group
+#calcul nb pep per protein group
 x<-dcast(MyReport, Protein.Group ~ File.Name,value.var="PG.MaxLFQ",fun.aggregate=length)
 colnames(x)<-c("Protein.Group",paste("Nb precurseur",colnames(x)[2:ncol(x)]))
 
